@@ -170,7 +170,7 @@ def test_auth_error_propagates_but_progress_is_saved(tmp_path):
 def test_hostile_file_id_is_failed_not_written(api_session, tmp_path, monkeypatch):
     mock_area()
 
-    def fake_iter(session, aoi_geometry):
+    def fake_iter(session, aoi_id, aoi_geometry):
         yield {
             "id": "../../evil",
             "original_filename": "x",
