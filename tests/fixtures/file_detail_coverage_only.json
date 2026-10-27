@@ -1,0 +1,57 @@
+{
+    "id": "83ff6d17-79d0-46ad-9c5b-167fd6a88ace",
+    "file_url": "http://127.0.0.1:10000/media/files/MDTFIRE/2026/10/river-flood-extent_mFntj4W.txt",
+    "thumbnail_url": null,
+    "original_filename": "river-flood-extent.txt",
+    "mime_type": "text/plain",
+    "file_size": 53,
+    "file_hash": "305fd8c2bdc3770789352ca91225f42c2338f2da7ae9946432882209901040b3",
+    "description": "Coverage polygon only, no point location",
+    "organization_name": "MDT Demo Fire Service",
+    "organization_code": "MDTFIRE",
+    "group_name": null,
+    "group_code": null,
+    "uploaded_by_username": "mdt_demo",
+    "uploaded_by_email": "",
+    "uploaded_at": "2026-10-27T13:17:24.803722Z",
+    "updated_at": "2026-10-27T13:17:24.803742Z",
+    "is_published": true,
+    "extraction_status": "pending",
+    "extracted_metadata": {},
+    "location_status": "manual",
+    "location_source": "",
+    "has_location": false,
+    "has_gps_metadata": {},
+    "latitude": null,
+    "longitude": null,
+    "location_dual_crs": null,
+    "coverage_area_dual_crs": {
+        "epsg_4326": {
+            "type": "Polygon",
+            "coordinates": [
+                [
+                    [
+                        -1.258,
+                        51.7465
+                    ],
+                    [
+                        -1.253,
+                        51.7465
+                    ],
+                    [
+                        -1.253,
+                        51.749
+                    ],
+                    [
+                        -1.258,
+                        51.749
+                    ],
+                    [
+                        -1.258,
+                        51.7465
+                    ]
+                ]
+            ]
+        }
+    }
+}

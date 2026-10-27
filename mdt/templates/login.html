@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Sign in - SafeSight MDT{% endblock %}
+{% block body_class %}login-page{% endblock %}
+{% block body %}
+<main class="login-wrap">
+  <form class="box login-box" method="post" action="{{ url_for('mdt.login') }}">
+    <h1 class="title is-4">SafeSight MDT</h1>
+    <p class="subtitle is-6">Mobile data terminal demonstrator. Sign in with your SafeSight account.</p>
+    {% if error %}
+    <div class="notification is-danger is-light" role="alert">{{ error }}</div>
+    {% endif %}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label class="label" for="username">Username</label>
+      <div class="control"><input class="input" id="username" name="username" type="text" autocomplete="username" required autofocus></div>
+    </div>
+    <div class="field">
+      <label class="label" for="password">Password</label>
+      <div class="control"><input class="input" id="password" name="password" type="password" autocomplete="current-password" required></div>
+    </div>
+    <button class="button is-link is-fullwidth" type="submit">Sign in</button>
+  </form>
+</main>
+{% endblock %}

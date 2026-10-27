@@ -1,0 +1,172 @@
+{
+    "count": 6,
+    "next": null,
+    "previous": null,
+    "results": {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "id": "2aa9b067-6202-4589-9172-5196665034b3",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [
+                        -1.26,
+                        51.755
+                    ]
+                },
+                "properties": {
+                    "id": "2aa9b067-6202-4589-9172-5196665034b3",
+                    "original_filename": "ambulance-staging-point.png",
+                    "mime_type": "image/png",
+                    "organization_id": "6e0a3edc-8425-4a1b-b38a-74e6a9bb28f6",
+                    "organization_name": "MDT Demo Ambulance Service",
+                    "group_id": null,
+                    "group_name": null,
+                    "uploaded_at": "2026-10-27T13:17:24.868818+00:00",
+                    "thumbnail_url": null,
+                    "extraction_status": "pending",
+                    "can_download": true,
+                    "regional_crs_code": null,
+                    "regional_x": null,
+                    "regional_y": null
+                }
+            },
+            {
+                "type": "Feature",
+                "id": "53b65ff1-6287-42da-9576-8505621362ef",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [
+                        -1.21,
+                        51.76
+                    ]
+                },
+                "properties": {
+                    "id": "53b65ff1-6287-42da-9576-8505621362ef",
+                    "original_filename": "headington-outside-area.txt",
+                    "mime_type": "text/plain",
+                    "organization_id": "b9f84a32-5a78-4c76-8712-1761847b7564",
+                    "organization_name": "MDT Demo Fire Service",
+                    "group_id": null,
+                    "group_name": null,
+                    "uploaded_at": "2026-10-27T13:17:24.816768+00:00",
+                    "thumbnail_url": null,
+                    "extraction_status": "pending",
+                    "can_download": true,
+                    "regional_crs_code": null,
+                    "regional_x": null,
+                    "regional_y": null
+                }
+            },
+            {
+                "type": "Feature",
+                "id": "d4797b6a-47d6-4d75-b595-ffca994199c0",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [
+                        -1.254,
+                        51.754
+                    ]
+                },
+                "properties": {
+                    "id": "d4797b6a-47d6-4d75-b595-ffca994199c0",
+                    "original_filename": "hydrant-layout.svg",
+                    "mime_type": "image/svg+xml",
+                    "organization_id": "b9f84a32-5a78-4c76-8712-1761847b7564",
+                    "organization_name": "MDT Demo Fire Service",
+                    "group_id": null,
+                    "group_name": null,
+                    "uploaded_at": "2026-10-27T13:17:24.758296+00:00",
+                    "thumbnail_url": null,
+                    "extraction_status": "pending",
+                    "can_download": true,
+                    "regional_crs_code": null,
+                    "regional_x": null,
+                    "regional_y": null
+                }
+            },
+            {
+                "type": "Feature",
+                "id": "021ddc2e-74d5-4130-847c-b871712000fa",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [
+                        -1.2545,
+                        51.7525
+                    ]
+                },
+                "properties": {
+                    "id": "021ddc2e-74d5-4130-847c-b871712000fa",
+                    "original_filename": "hydrant-notes.txt",
+                    "mime_type": "text/plain",
+                    "organization_id": "b9f84a32-5a78-4c76-8712-1761847b7564",
+                    "organization_name": "MDT Demo Fire Service",
+                    "group_id": null,
+                    "group_name": null,
+                    "uploaded_at": "2026-10-27T13:17:24.711375+00:00",
+                    "thumbnail_url": null,
+                    "extraction_status": "pending",
+                    "can_download": true,
+                    "regional_crs_code": null,
+                    "regional_x": null,
+                    "regional_y": null
+                }
+            },
+            {
+                "type": "Feature",
+                "id": "b831d723-3361-424f-a74e-542a403cb365",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [
+                        -1.267,
+                        51.7535
+                    ]
+                },
+                "properties": {
+                    "id": "b831d723-3361-424f-a74e-542a403cb365",
+                    "original_filename": "station-incident-report.pdf",
+                    "mime_type": "application/pdf",
+                    "organization_id": "b9f84a32-5a78-4c76-8712-1761847b7564",
+                    "organization_name": "MDT Demo Fire Service",
+                    "group_id": null,
+                    "group_name": null,
+                    "uploaded_at": "2026-10-27T13:17:24.659098+00:00",
+                    "thumbnail_url": null,
+                    "extraction_status": "pending",
+                    "can_download": true,
+                    "regional_crs_code": null,
+                    "regional_x": null,
+                    "regional_y": null
+                }
+            },
+            {
+                "type": "Feature",
+                "id": "ce6be340-36f1-441e-bb71-4fe06c9d428c",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [
+                        -1.2577,
+                        51.752
+                    ]
+                },
+                "properties": {
+                    "id": "ce6be340-36f1-441e-bb71-4fe06c9d428c",
+                    "original_filename": "carfax-scene-photo.png",
+                    "mime_type": "image/png",
+                    "organization_id": "b9f84a32-5a78-4c76-8712-1761847b7564",
+                    "organization_name": "MDT Demo Fire Service",
+                    "group_id": null,
+                    "group_name": null,
+                    "uploaded_at": "2026-10-27T13:17:24.598089+00:00",
+                    "thumbnail_url": null,
+                    "extraction_status": "pending",
+                    "can_download": true,
+                    "regional_crs_code": null,
+                    "regional_x": null,
+                    "regional_y": null
+                }
+            }
+        ]
+    }
+}
