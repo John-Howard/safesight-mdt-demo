@@ -5,6 +5,8 @@ import binascii
 import contextlib
 import json
 import tempfile
+import threading
+import time
 import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -41,7 +43,15 @@ class RateLimited(SafeSightError):
 
 
 class ServerUnavailable(SafeSightError):
-    pass
+    """SafeSight is down or unreachable.
+
+    `status` is the HTTP status for a 5xx response, and None for a network failure
+    (connection refused, timeout, bad JSON), so callers can tell the two apart.
+    """
+
+    def __init__(self, message: str, status: Optional[int] = None):
+        super().__init__(message)
+        self.status = status
 
 
 class InvalidTokenError(SafeSightError):
@@ -88,7 +98,7 @@ def _raise_for_status(response: requests.Response) -> None:
     if status == 429:
         raise RateLimited(message)
     if status >= 500:
-        raise ServerUnavailable(message)
+        raise ServerUnavailable(message, status=status)
     raise SafeSightError(message)
 
 
@@ -249,12 +259,107 @@ def _coverage_polygon(session: ApiSession, file_id: str) -> Optional[dict]:
     return dual.get("epsg_4326")
 
 
-def iter_area_files(session: ApiSession, aoi_geometry: dict) -> Iterator[dict]:
+# How long a server stays marked as needing the scan before the endpoint is tried again.
+AOI_FILES_RETRY_SECONDS = 900
+
+# base_url -> time.monotonic() when we learned the AOI files endpoint cannot be used (an
+# old server, or one that does not report can_download). Only that verdict is stored, so
+# a server that needs the scan is not probed, and does not log a 500, on every request.
+# The entry expires after AOI_FILES_RETRY_SECONDS and is dropped on read, so one transient
+# 5xx does not pin a server to the scan, and an upgraded SafeSight is noticed without a
+# restart of the MDT.
+_unsupported_lock = threading.Lock()
+_unsupported_servers: dict[str, float] = {}
+
+
+def reset_aoi_files_cache() -> None:
+    """Forget what we learned about each server's AOI files endpoint (for tests)."""
+    with _unsupported_lock:
+        _unsupported_servers.clear()
+
+
+def _mark_unsupported(base_url: str) -> None:
+    with _unsupported_lock:
+        _unsupported_servers[base_url] = time.monotonic()
+
+
+def _is_unsupported(base_url: str) -> bool:
+    with _unsupported_lock:
+        marked = _unsupported_servers.get(base_url)
+        if marked is None:
+            return False
+        if time.monotonic() - marked >= AOI_FILES_RETRY_SECONDS:
+            del _unsupported_servers[base_url]
+            return False
+        return True
+
+
+def _fetch_aoi_files(session: ApiSession, aoi_id: str) -> Optional[list[dict]]:
+    """Every result of the AOI files endpoint, or None when this server can't be used.
+
+    None means the endpoint failed with a 5xx or 404 (SafeSight before #396), or its
+    results lack `can_download`. Network failures, auth, permission and rate-limit
+    errors propagate. All pages are read before anything is returned, so a failure
+    on a later page falls back before a partial list has been yielded.
+    """
+    path = f"/api/v1/areas-of-interest/{aoi_id}/files/"
+    results: list[dict] = []
+    try:
+        for page in _walk(session, path, {"page_size": PAGE_SIZE}):
+            results.extend(page or [])
+    except NotFound:
+        return None
+    except ServerUnavailable as exc:
+        if exc.status is None:
+            raise  # network failure: the scan would fail too, and the routes go offline
+        return None
+    if results and not all("can_download" in row for row in results):
+        # SafeSight with #396 but without can_download. Using these results would
+        # make a viewer's sync try one doomed download per file, each one a denied
+        # row in SafeSight's FileAccessLog. The scan's can_download pre-check avoids
+        # that, so keep scanning until the server reports the flag.
+        return None
+    return results
+
+
+def _area_file_item(row: dict) -> dict:
+    file_geometry = geometry.to_geojson(row.get("location")) or geometry.to_geojson(
+        row.get("coverage_area")
+    )
+    return {
+        "id": str(row["id"]),
+        "original_filename": row.get("original_filename"),
+        "mime_type": row.get("mime_type"),
+        "file_size": row.get("file_size"),
+        "organization_name": row.get("organization_name"),
+        "group_name": row.get("group_name"),
+        "uploaded_at": row.get("uploaded_at"),
+        "can_download": bool(row["can_download"]),
+        "geometry": file_geometry,
+    }
+
+
+def iter_area_files(session: ApiSession, aoi_id: str, aoi_geometry: dict) -> Iterator[dict]:
     """Yield the files whose point or coverage polygon intersects the AOI.
 
-    SafeSight's own AOI files endpoint is broken (see docs/architecture.md), so
-    membership is computed here. Never sends a `format` query parameter.
+    Uses SafeSight's AOI files endpoint when it works and reports `can_download`,
+    and otherwise computes membership client-side (see docs/architecture.md).
+    Never sends a `format` query parameter.
     """
+    if not _is_unsupported(session.base_url):
+        results = _fetch_aoi_files(session, aoi_id)
+        if results is None:
+            _mark_unsupported(session.base_url)
+        else:
+            # An empty list cannot tell a server with can_download from one without,
+            # so it counts as supported for this call only and nothing is remembered.
+            yield from (_area_file_item(row) for row in results)
+            return
+    yield from _scan_area_files(session, aoi_geometry)
+
+
+def _scan_area_files(session: ApiSession, aoi_geometry: dict) -> Iterator[dict]:
+    """Client-side AOI membership: list the files, then intersect each with the AOI."""
     query = {"is_published": "true", "page_size": PAGE_SIZE}
     rows: list[dict] = []
     for page in _walk(session, "/api/v1/files/", query):

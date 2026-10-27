@@ -6,7 +6,7 @@ from typing import Optional
 import pytest
 import responses
 
-from mdt import token_store
+from mdt import safesight_client, token_store
 from mdt.config import Config
 from mdt.safesight_client import ApiSession, Tokens
 
@@ -37,6 +37,13 @@ def _clean_token_store():
     token_store.clear()
     yield
     token_store.clear()
+
+
+@pytest.fixture(autouse=True)
+def _clean_aoi_files_cache():
+    safesight_client.reset_aoi_files_cache()
+    yield
+    safesight_client.reset_aoi_files_cache()
 
 
 @pytest.fixture
@@ -105,8 +112,17 @@ def mock_area(aoi_id: str = AOI, name: str = "Zone") -> None:
     responses.get(AREAS_URL, json={"type": "FeatureCollection", "features": [feature]})
 
 
+def aoi_files_url(aoi_id: str = AOI) -> str:
+    return f"{BASE}/api/v1/areas-of-interest/{aoi_id}/files/"
+
+
 def mock_listing(*items: dict) -> None:
-    """Register the three SafeSight listing endpoints for the given file_item dicts."""
+    """Register the SafeSight listing endpoints for the given file_item dicts.
+
+    The AOI files endpoint answers 500, like a server without the fix, so the
+    client falls back to the scan these mocks describe.
+    """
+    responses.get(aoi_files_url(), status=500)
     results, features = [], []
     for it in items:
         results.append(

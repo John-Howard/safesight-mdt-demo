@@ -125,6 +125,7 @@ def test_timeout_maps_to_server_unavailable(api_session):
 
 
 def _mock_fixture_listing():
+    responses.get(conftest.aoi_files_url(), status=500)
     responses.get(f"{BASE}/api/v1/files/", json=load_fixture("files_list.json"))
     responses.get(f"{BASE}/api/v1/files/geojson/", json=load_fixture("files_geojson.json"))
     detail = load_fixture("file_detail_coverage_only.json")
@@ -138,7 +139,7 @@ def _aoi_geometry():
 @responses.activate
 def test_iter_area_files_real_fixtures_six_in_one_out(api_session):
     _mock_fixture_listing()
-    got = list(client.iter_area_files(api_session, _aoi_geometry()))
+    got = list(client.iter_area_files(api_session, AOI, _aoi_geometry()))
     names = sorted(f["original_filename"] for f in got)
     assert len(got) == 6
     assert names == sorted(
@@ -158,7 +159,7 @@ def test_iter_area_files_real_fixtures_six_in_one_out(api_session):
 def test_iter_area_files_item_shape_and_coverage_fallback(api_session):
     _mock_fixture_listing()
     by_name = {
-        f["original_filename"]: f for f in client.iter_area_files(api_session, _aoi_geometry())
+        f["original_filename"]: f for f in client.iter_area_files(api_session, AOI, _aoi_geometry())
     }
     for item in by_name.values():
         assert set(item) == {
@@ -184,7 +185,7 @@ def test_iter_area_files_item_shape_and_coverage_fallback(api_session):
 @responses.activate
 def test_detail_fetched_only_for_files_without_a_point(api_session):
     _mock_fixture_listing()
-    list(client.iter_area_files(api_session, _aoi_geometry()))
+    list(client.iter_area_files(api_session, AOI, _aoi_geometry()))
     pattern = re.compile(r"/api/v1/files/[0-9a-f-]{36}/$")
     detail_calls = [c for c in responses.calls if pattern.search(c.request.url)]
     assert len(detail_calls) == 1
@@ -194,13 +195,12 @@ def test_detail_fetched_only_for_files_without_a_point(api_session):
 @responses.activate
 def test_iter_area_files_requests_are_safe(api_session):
     _mock_fixture_listing()
-    list(client.iter_area_files(api_session, _aoi_geometry()))
+    list(client.iter_area_files(api_session, AOI, _aoi_geometry()))
     for call in responses.calls:
         url = call.request.url
         assert "format" not in url
-        assert "areas-of-interest" not in url
         assert "spatial_search" not in url
-    first = responses.calls[0].request.url
+    first = responses.calls[1].request.url  # calls[0] is the 500 AOI probe
     assert "is_published=true" in first
     assert "page_size=200" in first
 
@@ -208,7 +208,7 @@ def test_iter_area_files_requests_are_safe(api_session):
 @responses.activate
 def test_can_download_false_is_carried_through(api_session):
     conftest.mock_listing(conftest.file_item(FILE_A, can_download=False))
-    (item,) = client.iter_area_files(api_session, conftest.AREA_GEOMETRY)
+    (item,) = client.iter_area_files(api_session, AOI, conftest.AREA_GEOMETRY)
     assert item["can_download"] is False
 
 
@@ -218,12 +218,13 @@ def test_coverage_less_file_without_point_is_dropped(api_session):
         conftest.file_item(FILE_A, point=None, coverage=None),
         conftest.file_item(FILE_B, point=None, coverage=conftest.COVERAGE),
     )
-    ids = [f["id"] for f in client.iter_area_files(api_session, conftest.AREA_GEOMETRY)]
+    ids = [f["id"] for f in client.iter_area_files(api_session, AOI, conftest.AREA_GEOMETRY)]
     assert ids == [FILE_B]
 
 
 @responses.activate
 def test_both_walks_follow_next_links(api_session):
+    responses.get(conftest.aoi_files_url(), status=500)
     base_list = f"{BASE}/api/v1/files/"
     base_geo = f"{BASE}/api/v1/files/geojson/"
 
@@ -248,19 +249,20 @@ def test_both_walks_follow_next_links(api_session):
         base_geo, json={"next": f"{base_geo}?page=2&page_size=200", "results": fc(feat("1"))}
     )
     responses.get(f"{base_geo}?page=2&page_size=200", json={"next": None, "results": fc(feat("2"))})
-    got = [f["id"] for f in client.iter_area_files(api_session, conftest.AREA_GEOMETRY)]
+    got = [f["id"] for f in client.iter_area_files(api_session, AOI, conftest.AREA_GEOMETRY)]
     assert got == ["1", "2"]
 
 
 @responses.activate
 def test_next_link_on_foreign_host_is_never_requested(api_session):
+    responses.get(conftest.aoi_files_url(), status=500)
     responses.get(
         f"{BASE}/api/v1/files/",
         json={"next": "http://evil.test/steal/?page=2", "results": []},
     )
     responses.get(f"{BASE}/steal/?page=2", json={"next": None, "results": []})
     responses.get(f"{BASE}/api/v1/files/geojson/", json={"next": None, "results": {"features": []}})
-    list(client.iter_area_files(api_session, conftest.AREA_GEOMETRY))
+    list(client.iter_area_files(api_session, AOI, conftest.AREA_GEOMETRY))
     assert all(c.request.url.startswith(BASE) for c in responses.calls)
 
 

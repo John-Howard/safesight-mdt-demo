@@ -55,7 +55,7 @@ def sync_area(
     limit_hit = False
 
     try:
-        for item in safesight_client.iter_area_files(session, area_geometry):
+        for item in safesight_client.iter_area_files(session, aoi_id, area_geometry):
             summary["total"] += 1
             try:
                 cache.valid_id(item["id"])

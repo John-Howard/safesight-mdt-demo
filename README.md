@@ -77,7 +77,7 @@ Never run the script against production.
 ## Design
 
 See [docs/architecture.md](docs/architecture.md) for the module layout, the SafeSight API
-contract the app relies on, and why AOI membership is computed client-side.
+contract the app relies on, and how AOI membership is found (the AOI files endpoint when supported, else a client-side scan).
 
 ## Known limitations
 
@@ -87,20 +87,27 @@ contract the app relies on, and why AOI membership is computed client-side.
   restarting the app signs everyone out, and the cached data cannot be browsed until you
   sign in again (which needs SafeSight to be reachable).
 - Single-process development server; not hardened for production or many concurrent users.
-- A sync scans every file the user can see (SafeSight's own AOI files endpoint is broken),
-  which is fine at demo scale.
+- The MDT uses SafeSight's AOI files endpoint (fixed in SafeSight #396) only when its
+  results include `can_download`. Against a server without that field, or an older one
+  that still returns 500, a sync scans every file the user can see, which is fine at
+  demo scale.
 - The browser UI (`app.js`) is not covered by the pytest suite. It was checked end to
   end with Playwright against a live, seeded SafeSight instance.
 
 ## SafeSight issues found while building this
 
-These were found against a live instance and are **not** fixed here, because this repo
-does not modify SafeSight:
+These were found against a live instance. This repo does not modify SafeSight, so both
+are recorded here as history and have since been fixed upstream:
 
 1. `GET /api/v1/areas-of-interest/{id}/files/` and `POST /api/v1/files/spatial_search/`
-   return **500**. The `distance` annotation is a GeoDjango `Distance` object, but
-   `SpatialSearchResultSerializer.distance` is a `FloatField`. Their `?format=geojson`
-   mode returns **404**, because `format` is DRF's reserved renderer-override parameter.
-2. **View-only spatial shares are still downloadable.** `user_can_download_file` in
-   `files/permissions.py` never checks the match's `permission_level`. A share set to
-   `view` returns `can_download: true` and HTTP 200 on `/download/`.
+   returned **500**, because the `distance` annotation is a GeoDjango `Distance` object
+   but `SpatialSearchResultSerializer.distance` is a `FloatField`. Fixed upstream in
+   [SafeSight #396](https://github.com/John-Howard/safesight/pull/396): both endpoints
+   no longer return 500, and `distance` is float metres or null. The GeoJSON selector is
+   now `?output=geojson`; `?format=geojson` still returns **404**, because `format` is
+   DRF's reserved renderer-override parameter. See the AOI files note in
+   `docs/architecture.md` for how the MDT uses the endpoint.
+2. **View-only spatial shares were downloadable.** `user_can_download_file` in
+   `files/permissions.py` never checked the match's `permission_level`, so a share set
+   to `view` returned `can_download: true` and HTTP 200 on `/download/`. Fixed upstream in
+   [SafeSight #397](https://github.com/John-Howard/safesight/pull/397).
