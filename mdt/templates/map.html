@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Map - SafeSight MDT{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet.css') }}">
+{% endblock %}
+{% block body_class %}map-page{% endblock %}
+{% block body %}
+<div class="layout">
+  <aside class="sidebar">
+    <header class="sidebar-head">
+      <div class="brand">
+        <span class="title is-5">SafeSight MDT</span>
+        <span id="conn" class="tag is-success" role="status">Online</span>
+      </div>
+      <form class="user" method="post" action="{{ url_for('mdt.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <span class="user-name">{{ username }}</span>
+        <button class="button is-small is-light" type="submit">Sign out</button>
+      </form>
+    </header>
+
+    <section class="panel-block-section">
+      <h2 class="section-title">Areas of interest</h2>
+      <ul id="areas" class="item-list" aria-label="Areas of interest"></ul>
+      <p id="areas-empty" class="hint" hidden>No areas available.</p>
+    </section>
+
+    <section id="files-section" class="panel-block-section files-section" hidden>
+      <div class="files-head">
+        <h2 id="area-name" class="section-title"></h2>
+        <button id="sync-btn" class="button is-small is-link" type="button">Sync area</button>
+      </div>
+      <p id="sync-result" class="notification is-light is-size-7" role="status" hidden></p>
+      <p id="files-note" class="hint" hidden></p>
+      <ul id="files" class="item-list" aria-label="Files in area"></ul>
+      <div class="legend" aria-hidden="true">
+        <span class="dot dot-downloaded"></span>Synced
+        <span class="dot dot-not_synced"></span>Not synced
+        <span class="dot dot-denied"></span>Denied
+        <span class="dot dot-failed"></span>Failed
+      </div>
+    </section>
+  </aside>
+
+  <main class="map-wrap">
+    <div id="map" aria-label="Map"></div>
+    <section id="preview" class="preview" hidden>
+      <header class="preview-head">
+        <strong id="preview-title" class="preview-title"></strong>
+        <button id="preview-close" class="delete" type="button" aria-label="Close preview"></button>
+      </header>
+      <div id="preview-body" class="preview-body"></div>
+    </section>
+  </main>
+</div>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='vendor/leaflet.js') }}"></script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}
