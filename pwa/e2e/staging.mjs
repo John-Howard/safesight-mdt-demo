@@ -15,6 +15,8 @@
 //   MDT_STAGING_AOI       name of the area to open (default: the first one listed)
 //   MDT_STAGING_SYNC      "0" to skip Sync. Each download is logged in SafeSight's
 //                         FileAccessLog, and shared files notify the owning organisation.
+//   MDT_STAGING_SYNC_TIMEOUT_MS  how long to wait for Sync to finish (default 600000). Files
+//                         download one at a time, about 0.2 s each on staging.
 //
 // django-axes locks an account after repeated failed sign-ins, so a rejected sign-in stops the
 // run at once rather than retrying.
@@ -36,6 +38,7 @@ const PASSWORD = process.env.MDT_STAGING_PASSWORD;
 const AOI_NAME = process.env.MDT_STAGING_AOI;
 const DO_SYNC = process.env.MDT_STAGING_SYNC !== "0";
 const TIMEOUT = 120_000;
+const SYNC_TIMEOUT = Number(process.env.MDT_STAGING_SYNC_TIMEOUT_MS) || 600_000;
 const TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -168,7 +171,7 @@ async function main() {
 
     if (DO_SYNC && fileNames.length > 0) {
       await page.locator("#sync-btn").click();
-      await page.locator("#sync-result", { hasText: /^(Downloaded|Sync failed)/ }).waitFor();
+      await page.locator("#sync-result", { hasText: /^(Downloaded|Sync failed)/ }).waitFor({ timeout: SYNC_TIMEOUT });
       const result = await page.locator("#sync-result").textContent();
       check(result.startsWith("Downloaded"), `sync: ${result}`);
       // The list reloads after the summary appears; wait for it before reading statuses.
