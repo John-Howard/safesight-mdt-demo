@@ -166,6 +166,38 @@ organisations). The cache is namespaced per SafeSight user: at login the app rea
 (`image/png|jpeg|gif|webp`, `application/pdf`, `text/plain`), and **SVG and HTML are
 always served as downloads**, because they can carry script.
 
+## PWA variant
+
+`pwa/` is a browser-only port of the same MDT, for devices (notably iPhones) where running the
+Flask app is not an option. It is a set of static files: native ES modules, no build step, no
+runtime dependencies. [pwa/README.md](../pwa/README.md) covers serving it, Add to Home Screen,
+storage and tests. The SafeSight API contract and every trap described above apply unchanged;
+`pwa/js/client.js` and `pwa/js/sync.js` are ports of `mdt/safesight_client.py` and
+`mdt/sync.py`, with the same statuses, the same AOI files endpoint detection and the same
+per-`base_url` 900 s "unsupported" memory.
+
+How it differs from the Flask app:
+
+| | Flask app (`mdt/`) | PWA (`pwa/`) |
+|---|---|---|
+| Server | Flask backend-for-frontend; the browser only talks to it | none; the browser talks to SafeSight directly |
+| Tokens | server-side store, never in the browser | `localStorage` (`mdt.auth`): readable by any script on the origin, accepted for a demo and mitigated by a strict CSP |
+| Cache | per-user directory on the server (`cache.py`) | per-user IndexedDB stores (`js/store.js`): a `manifests` store keyed `[userId, aoiId]` and a `blobs` store keyed `[userId, aoiId, fileId]` |
+| Offline | the server keeps working when SafeSight is down; the browser needs the server | a service worker (`pwa/sw.js`) serves the app shell, and the page falls back to the stored manifests; also works with no network at all |
+| Geometry | shapely | `js/geometry.js`: WKT/EWKT parser and 2D intersection with shapely's boundary-touching semantics |
+| CORS | not involved (server to server) | required: the page's origin must be in SafeSight's `CORS_ALLOWED_ORIGINS`, and the app only sends the `authorization` and `content-type` request headers |
+| Preview | served from disk with `X-Content-Type-Options: nosniff` | from the stored Blob via `URL.createObjectURL`; same allow-list, and SVG and HTML are re-typed `application/octet-stream` and offered only as a download |
+| CSP | response header from Flask | a `<meta>` policy in `index.html` (`script-src 'self'`, `connect-src` open to `https:` because the SafeSight URL is entered at runtime) |
+
+Things the PWA does that the Flask app does not: it writes the manifest after each file (so an
+interrupted sync on iOS keeps what it got), fails files with "device storage full" on
+`QuotaExceededError` and stops downloading, lets the user delete one cached area, shows
+`navigator.storage.estimate()` usage, and keeps rotated tokens across reloads. The cache is
+namespaced by the `user_id` claim exactly as in the Flask app.
+
+Sizing: a sync is capped at 100 MB per area (`maxSyncBytes` in `pwa/config.js`) rather than the
+Flask app's 500 MB, since browser storage quotas are smaller and device dependent.
+
 ## Testing
 
 - Unit tests (pytest + `responses` to mock HTTP, with fixtures shaped like real
@@ -182,4 +214,5 @@ always served as downloads**, because they can carry script.
 ## Out of scope
 
 Uploading from the MDT, push notifications, background sync, multiple concurrent
-users at scale, and token persistence across restarts.
+users at scale, and (for the Flask app; the PWA does persist tokens) token persistence across
+restarts.
