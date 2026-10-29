@@ -34,6 +34,7 @@ const state = {
   store: null,
   storeIsVolatile: false,
   aoiId: null,
+  areas: new Map(), // id -> feature, from the last live area list
   hasCache: false,
   files: [],
   offline: false,
@@ -150,6 +151,7 @@ function teardownSession() {
   state.auth = null;
   state.session = null;
   state.aoiId = null;
+  state.areas.clear();
   state.files = [];
   state.hasCache = false;
   closePreview();
@@ -321,7 +323,9 @@ async function loadAreas() {
     const data = await getAreasGeoJSON(session);
     if (session !== state.session) return;
     setOffline(false);
-    renderAreas(data.features || []);
+    const features = data.features || [];
+    state.areas = new Map(features.map((f) => [String((f.properties || {}).id ?? f.id), f]));
+    renderAreas(features);
   } catch (err) {
     if (session !== state.session) return;
     if (err instanceof AuthError) return handleAuthFailure();
@@ -428,7 +432,8 @@ async function fetchAreaFiles(aoiId) {
   const manifest = await store.getManifest(auth.userId, aoiId);
   try {
     if (knownOffline()) throw new ServerUnavailable("Offline", null);
-    const areaFeature = await getAreaFeature(session, aoiId);
+    // The area list was fetched moments ago; ask again only for an area it did not contain.
+    const areaFeature = state.areas.get(String(aoiId)) ?? (await getAreaFeature(session, aoiId));
     const items = await listAreaFiles(session, aoiId, areaFeature.geometry);
     const usable = items.filter((item) => normalizeUuid(item.id) !== null);
     const files = [];

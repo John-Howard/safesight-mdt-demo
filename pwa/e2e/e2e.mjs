@@ -313,6 +313,8 @@ async function phoneRun(browser) {
     check((await page.locator("#files .item-btn").count()) === 6, "phone: six files listed via the AOI files endpoint");
     check(mock.requests.some((r) => /\/areas-of-interest\/[^/]+\/files\/$/.test(r.path) && r.method === "GET"), "phone: the AOI files endpoint was used");
     check(!mock.requests.some((r) => r.path === "/api/v1/files/geojson/"), "phone: no per-file scan requests were needed");
+    const areaLists = mock.requests.filter((r) => r.method === "GET" && r.path === "/api/v1/areas-of-interest/geojson/").length;
+    check(areaLists === 1, `phone: signing in and opening an area fetched the area list once (${areaLists})`);
 
     const map = await page.locator("#map").boundingBox();
     const sidebar = await page.locator(".sidebar").boundingBox();
