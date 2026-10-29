@@ -44,6 +44,28 @@ cannot tell a CORS refusal from a server that is down, so the message names both
 is another cause: an `https://` page cannot call a plain `http://` SafeSight (except on
 localhost).
 
+## Serve it from GitHub Pages
+
+`.github/workflows/pages.yml` publishes the app on every push to `main` that touches `pwa/` (or
+by hand from the Actions tab). It runs the unit tests, then publishes only the files the page
+loads: `pwa/tests`, `pwa/e2e` and `pwa/tools` are left out, because `e2e/staging.mjs` names the
+staging URL and account. The site is served at `https://<owner>.github.io/<repo>/`; every path
+the app uses is relative, so the sub-path needs no changes.
+
+Before the first run:
+
+1. **Settings > Pages > Source: GitHub Actions.** A private repository can only publish to Pages
+   on a paid plan, and the published site is public either way.
+2. **Add the origin to SafeSight's `CORS_ALLOWED_ORIGINS`**: `https://<owner>.github.io`, with no
+   repository path (an origin has none).
+
+Every Pages site under one account shares the `https://<owner>.github.io` origin, so they also
+share `localStorage` and IndexedDB. Any other Pages site under the account can read this app's
+tokens and cached files, and allowing that origin in SafeSight's CORS settings allows all of
+them. A custom domain for the Pages site (Settings > Pages > Custom domain, for example
+`mdt.example.com`) gives the app an origin of its own; list that in `CORS_ALLOWED_ORIGINS`
+instead.
+
 ## Add to Home Screen (iOS)
 
 In Safari, Share, then **Add to Home Screen**. Do this for anything you rely on offline:
