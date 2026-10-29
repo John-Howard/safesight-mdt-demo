@@ -1,0 +1,61 @@
+# Publishes the PWA (pwa/) to GitHub Pages.
+#
+# Only the files the page loads are published: pwa/tests, pwa/e2e (which names the staging URL
+# and account) and pwa/tools stay out. Pages must be enabled with "GitHub Actions" as its source
+# (Settings > Pages) before the first run. See pwa/README.md, "Serve it from GitHub Pages".
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["pwa/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Unit tests
+        run: node --test "pwa/tests/*.test.js"
+      - name: Stage the app shell
+        run: |
+          set -euo pipefail
+          mkdir _site
+          cp pwa/index.html pwa/app.css pwa/config.js pwa/manifest.webmanifest pwa/sw.js _site/
+          cp -r pwa/js pwa/vendor pwa/icons _site/
+          # Every file the service worker precaches must be in the site, or install fails.
+          node -e '
+            const fs = require("fs");
+            const src = fs.readFileSync("_site/sw.js", "utf8");
+            const list = src.match(/const SHELL_FILES = (\[[\s\S]*?\]);/)[1];
+            const missing = JSON.parse(list.replace(/,\s*\]/, "]"))
+              .filter((f) => f !== "./" && !fs.existsSync("_site/" + f.slice(2)));
+            if (missing.length) { console.error("missing from _site:", missing); process.exit(1); }
+          '
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

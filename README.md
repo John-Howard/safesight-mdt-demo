@@ -50,6 +50,14 @@ uv run ruff format . && uv run ruff check --fix .
 
 Tests mock all HTTP with `responses`; no network or SafeSight instance is needed.
 
+## Browser / iOS version
+
+`pwa/` is a second implementation of the same MDT that needs no server of its own: plain static
+files that run in the browser (including iOS Safari), call SafeSight directly over CORS, keep
+synced files in IndexedDB, and work offline through a service worker. It needs the page's origin
+in SafeSight's `CORS_ALLOWED_ORIGINS`. The Flask app above is unchanged. See
+[pwa/README.md](pwa/README.md) to serve it, add it to an iPhone's Home Screen, and run its tests.
+
 ## Seeding a SafeSight instance
 
 `scripts/seed_safesight_demo.py` creates a demo organisation, user, AOI and located

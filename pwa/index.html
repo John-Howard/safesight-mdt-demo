@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; frame-src blob:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self'">
+  <meta name="theme-color" content="#1f2d3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SafeSight MDT">
+  <title>SafeSight MDT</title>
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="vendor/bulma.min.css">
+  <link rel="stylesheet" href="vendor/leaflet.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <noscript><p class="noscript">SafeSight MDT needs JavaScript.</p></noscript>
+
+  <main id="signin-view" class="signin-page" hidden>
+    <form id="signin-form" class="box signin-box" method="post" autocomplete="on">
+      <h1 class="title is-4">SafeSight MDT</h1>
+      <p class="subtitle is-6">Mobile data terminal demonstrator. Sign in with your SafeSight account.</p>
+      <div id="signin-error" class="notification is-danger is-light" role="alert" hidden></div>
+      <div class="field">
+        <label class="label" for="base-url">SafeSight URL</label>
+        <div class="control"><input class="input" id="base-url" name="baseUrl" type="url" inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="https://safesight.example.com" required></div>
+      </div>
+      <div class="field">
+        <label class="label" for="username">Username</label>
+        <div class="control"><input class="input" id="username" name="username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required></div>
+      </div>
+      <div class="field">
+        <label class="label" for="password">Password</label>
+        <div class="control"><input class="input" id="password" name="password" type="password" autocomplete="current-password" required></div>
+      </div>
+      <button id="signin-btn" class="button is-link is-fullwidth" type="submit">Sign in</button>
+      <p id="signin-origin" class="hint"></p>
+    </form>
+  </main>
+
+  <div id="map-view" class="layout" hidden>
+    <aside class="sidebar">
+      <header class="sidebar-head">
+        <div class="brand">
+          <span class="title is-5">SafeSight MDT</span>
+          <span id="conn" class="tag is-success" role="status">Online</span>
+        </div>
+        <div class="user">
+          <span id="user-name" class="user-name"></span>
+          <button id="signout-btn" class="button is-small is-light" type="button">Sign out</button>
+        </div>
+      </header>
+
+      <section class="panel-block-section">
+        <h2 class="section-title">Areas of interest</h2>
+        <ul id="areas" class="item-list" aria-label="Areas of interest"></ul>
+        <p id="areas-empty" class="hint" hidden>No areas available.</p>
+      </section>
+
+      <section id="files-section" class="panel-block-section files-section" hidden>
+        <div class="files-head">
+          <h2 id="area-name" class="section-title"></h2>
+          <div class="buttons are-small">
+            <button id="sync-btn" class="button is-link" type="button">Sync area</button>
+            <button id="delete-btn" class="button is-light is-danger" type="button" hidden>Delete cached area</button>
+          </div>
+        </div>
+        <p id="sync-result" class="notification is-light is-size-7" role="status" hidden></p>
+        <p id="files-note" class="hint" hidden></p>
+        <ul id="files" class="item-list" aria-label="Files in area"></ul>
+        <div class="legend" aria-hidden="true">
+          <span class="dot dot-downloaded"></span>Synced
+          <span class="dot dot-not_synced"></span>Not synced
+          <span class="dot dot-denied"></span>Denied
+          <span class="dot dot-failed"></span>Failed
+        </div>
+      </section>
+
+      <section class="panel-block-section storage-section">
+        <p id="storage" class="hint" role="status" hidden></p>
+      </section>
+    </aside>
+
+    <main class="map-wrap">
+      <div id="map" aria-label="Map"></div>
+      <section id="preview" class="preview" aria-label="File preview" hidden>
+        <header class="preview-head">
+          <strong id="preview-title" class="preview-title"></strong>
+          <button id="preview-close" class="delete" type="button" aria-label="Close preview"></button>
+        </header>
+        <div id="preview-body" class="preview-body"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="vendor/leaflet.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

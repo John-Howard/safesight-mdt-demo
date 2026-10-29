@@ -1,0 +1,50 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "id": "f7374155-7d73-4c47-995e-ae427a2b4262",
+            "geometry": {
+                "type": "MultiPolygon",
+                "coordinates": [
+                    [
+                        [
+                            [
+                                -1.27,
+                                51.747
+                            ],
+                            [
+                                -1.245,
+                                51.747
+                            ],
+                            [
+                                -1.245,
+                                51.759
+                            ],
+                            [
+                                -1.27,
+                                51.759
+                            ],
+                            [
+                                -1.27,
+                                51.747
+                            ]
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "id": "f7374155-7d73-4c47-995e-ae427a2b4262",
+                "name": "Oxford city centre",
+                "description": "MDT demo response area",
+                "purpose": "custom",
+                "is_active": true,
+                "organization_id": "b9f84a32-5a78-4c76-8712-1761847b7564",
+                "organization_name": "MDT Demo Fire Service",
+                "group_id": null,
+                "group_name": null,
+                "created_at": "2026-10-27T13:17:24.393166+00:00"
+            }
+        }
+    ]
+}
