@@ -128,6 +128,19 @@ viewport (390x844) for the phone layout run:
 node pwa/e2e/e2e.mjs
 ```
 
+`e2e/staging.mjs` runs the same journey against a real SafeSight (staging by default) before its
+CORS settings list this app's origin. The test sends SafeSight requests from Node and adds the
+CORS header itself, so everything except CORS is real. Each download is logged in SafeSight's
+`FileAccessLog`; set `MDT_STAGING_SYNC=0` to skip the sync. A rejected sign-in stops the run
+without retrying, because django-axes locks accounts. The header of the script lists every
+variable.
+
+```bash
+MDT_STAGING_PASSWORD=... NODE_USE_ENV_PROXY=1 node pwa/e2e/staging.mjs
+```
+
+`NODE_USE_ENV_PROXY=1` is needed only behind an HTTPS proxy (Node 22.21 or later).
+
 Only Chromium is tested. Nothing here has been run on a real iPhone: iOS-specific behaviour (the
 seven-day eviction, PDF in an iframe showing only the first page, `download` on Blob links, quota
 sizes) follows from documented WebKit behaviour and is unverified.
