@@ -43,6 +43,7 @@ def sync_area(
     aoi_id = cache.valid_id(aoi_id)
     area_feature = safesight_client.get_area_feature(session, aoi_id)  # NotFound if absent
     area_geometry = area_feature.get("geometry")
+    group_id = (area_feature.get("properties") or {}).get("group_id")
     area = {
         "name": (area_feature.get("properties") or {}).get("name"),
         "geometry": area_geometry,
@@ -55,7 +56,7 @@ def sync_area(
     limit_hit = False
 
     try:
-        for item in safesight_client.iter_area_files(session, aoi_id, area_geometry):
+        for item in safesight_client.iter_area_files(session, aoi_id, area_geometry, group_id):
             summary["total"] += 1
             try:
                 cache.valid_id(item["id"])

@@ -465,7 +465,7 @@ const ENDPOINT = aoiFilesUrl();
 const POINT_WKT = "SRID=4326;POINT(-1.25 51.75)";
 const COVERAGE_WKT = "SRID=4326;POLYGON((-1.26 51.74, -1.25 51.74, -1.25 51.75, -1.26 51.75, -1.26 51.74))";
 
-function result(id, { location = null, coverage = null, can_download } = {}) {
+function result(id, { location = null, coverage = null, can_download, group = null } = {}) {
   const row = {
     id,
     original_filename: `${id.slice(0, 4)}.png`,
@@ -477,8 +477,8 @@ function result(id, { location = null, coverage = null, can_download } = {}) {
     coverage_area: coverage,
     organization: "99999999-9999-4999-8999-999999999999",
     organization_name: "Org",
-    group: null,
-    group_name: null,
+    group,
+    group_name: group === null ? null : "Group",
     uploaded_by: "u",
     uploaded_by_username: "bob",
     uploaded_at: "2026-01-01T00:00:00Z",
@@ -751,3 +751,81 @@ test("TTL: the default clock is real, so a fresh verdict is remembered", async (
   await run(session);
   assert.equal(probes(fake), 1);
 });
+
+// ---- group areas: a group area lists only files tagged with that group ----------------
+
+const GROUP = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+const OTHER_GROUP = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+const runGroup = (session, groupId) => client.listAreaFiles(session, AOI, AREA_GEOMETRY, groupId);
+const listingUrls = (fake) => fake.urls().filter((u) => u.includes("is_published=true"));
+
+test("group area: the endpoint's rows are cut down to those tagged with the group", async () => {
+  const { fake, session } = setup();
+  fake.on(
+    "GET",
+    ENDPOINT,
+    reply(page([
+      result(FILE_A, { location: point(), can_download: true, group: GROUP }),
+      result(FILE_B, { location: point(), can_download: true, group: OTHER_GROUP }),
+      result(FILE_C, { location: point(), can_download: true, group: null }),
+    ])),
+  );
+  assert.deepEqual((await runGroup(session, GROUP)).map((f) => f.id), [FILE_A]);
+});
+
+test("group area: the group id compares case-insensitively", async () => {
+  const { fake, session } = setup();
+  fake.on(
+    "GET",
+    ENDPOINT,
+    reply(page([result(FILE_A, { location: point(), can_download: true, group: GROUP.toUpperCase() })])),
+  );
+  assert.deepEqual((await runGroup(session, GROUP)).map((f) => f.id), [FILE_A]);
+});
+
+test("organisation area: the endpoint's rows are all kept", async () => {
+  const { fake, session } = setup();
+  fake.on(
+    "GET",
+    ENDPOINT,
+    reply(page([
+      result(FILE_A, { location: point(), can_download: true, group: GROUP }),
+      result(FILE_B, { location: point(), can_download: true }),
+    ])),
+  );
+  assert.deepEqual((await runGroup(session, null)).map((f) => f.id), [FILE_A, FILE_B]);
+});
+
+test("group area: the scan sends group on both list requests", async () => {
+  const { fake, session } = setup();
+  mockScanOfTwoFiles(fake);
+  assert.deepEqual(new Set((await runGroup(session, GROUP)).map((f) => f.id)), new Set([FILE_A, FILE_B]));
+  const listed = listingUrls(fake);
+  assert.equal(listed.length, 2);
+  assert.ok(listed.every((u) => u.includes(`group=${GROUP}`)));
+  assert.ok(listed.some((u) => u.includes("/api/v1/files/geojson/")));
+});
+
+test("group area: the scan sends the group id in canonical form", async () => {
+  const { fake, session } = setup();
+  mockScanOfTwoFiles(fake);
+  await runGroup(session, GROUP.toUpperCase());
+  assert.ok(listingUrls(fake).every((u) => u.includes(`group=${GROUP}`)));
+});
+
+test("organisation area: the scan sends no group parameter", async () => {
+  const { fake, session } = setup();
+  mockScanOfTwoFiles(fake);
+  await runGroup(session, null);
+  assert.equal(listingUrls(fake).length, 2);
+  assert.ok(listingUrls(fake).every((u) => !u.includes("group")));
+});
+
+for (const bad of ["", "not-a-uuid", `${GROUP}&x=1`, "../x", 5]) {
+  test(`group area: an invalid group id (${JSON.stringify(bad)}) yields nothing and requests nothing`, async () => {
+    const { fake, session } = setup();
+    mockScanOfTwoFiles(fake);
+    assert.deepEqual(await runGroup(session, bad), []);
+    assert.equal(fake.calls.length, 0);
+  });
+}

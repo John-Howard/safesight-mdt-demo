@@ -27,7 +27,11 @@ ITEM_KEYS = {
 }
 
 
-def result(fid, *, location=None, coverage=None, can_download=...):
+GROUP = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
+OTHER_GROUP = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+
+
+def result(fid, *, location=None, coverage=None, can_download=..., group=None):
     row = {
         "id": fid,
         "original_filename": f"{fid[:4]}.png",
@@ -39,8 +43,8 @@ def result(fid, *, location=None, coverage=None, can_download=...):
         "coverage_area": coverage,
         "organization": "99999999-9999-4999-8999-999999999999",
         "organization_name": "Org",
-        "group": None,
-        "group_name": None,
+        "group": group,
+        "group_name": None if group is None else "Group",
         "uploaded_by": "u",
         "uploaded_by_username": "bob",
         "uploaded_at": "2026-01-01T00:00:00Z",
@@ -343,3 +347,82 @@ def test_expired_entry_is_dropped_on_read(monkeypatch):
     monkeypatch.setattr(client, "AOI_FILES_RETRY_SECONDS", 0)
     assert client._is_unsupported(BASE) is False
     assert client._unsupported_servers == {}
+
+
+# ---- group areas -----------------------------------------------------------
+
+
+def run_group(api_session, group_id):
+    return list(client.iter_area_files(api_session, AOI, AREA_GEOMETRY, group_id))
+
+
+def listing_requests():
+    return [u for u in urls() if "is_published=true" in u]
+
+
+@responses.activate
+def test_group_area_keeps_only_rows_tagged_with_its_group(api_session):
+    responses.get(
+        ENDPOINT,
+        json=page(
+            result(FILE_A, location=point(), can_download=True, group=GROUP),
+            result(FILE_B, location=point(), can_download=True, group=OTHER_GROUP),
+            result(FILE_C, location=point(), can_download=True, group=None),
+        ),
+    )
+    assert [f["id"] for f in run_group(api_session, GROUP)] == [FILE_A]
+
+
+@responses.activate
+def test_group_compare_ignores_uuid_case(api_session):
+    responses.get(
+        ENDPOINT,
+        json=page(result(FILE_A, location=point(), can_download=True, group=GROUP.upper())),
+    )
+    assert [f["id"] for f in run_group(api_session, GROUP)] == [FILE_A]
+
+
+@responses.activate
+def test_organisation_area_keeps_every_row(api_session):
+    responses.get(
+        ENDPOINT,
+        json=page(
+            result(FILE_A, location=point(), can_download=True, group=GROUP),
+            result(FILE_B, location=point(), can_download=True, group=None),
+        ),
+    )
+    assert [f["id"] for f in run_group(api_session, None)] == [FILE_A, FILE_B]
+
+
+@responses.activate
+def test_group_area_scan_sends_group_on_both_list_requests(api_session):
+    mock_scan_of_two_files()
+    got = run_group(api_session, GROUP)
+    assert {f["id"] for f in got} == {FILE_A, FILE_B}
+    listed = listing_requests()
+    assert len(listed) == 2
+    assert all(f"group={GROUP}" in u for u in listed)
+    assert any("/api/v1/files/geojson/" in u for u in listed)
+
+
+@responses.activate
+def test_group_id_in_scan_is_sent_canonical(api_session):
+    mock_scan_of_two_files()
+    run_group(api_session, GROUP.upper())
+    assert all(f"group={GROUP}" in u for u in listing_requests())
+
+
+@responses.activate
+def test_organisation_area_scan_sends_no_group_param(api_session):
+    mock_scan_of_two_files()
+    run_group(api_session, None)
+    assert len(listing_requests()) == 2
+    assert all("group" not in u for u in listing_requests())
+
+
+@pytest.mark.parametrize("bad", ["", "not-a-uuid", f"{GROUP}&x=1", "../x", 5])
+@responses.activate
+def test_invalid_group_id_yields_nothing_and_requests_nothing(api_session, bad):
+    mock_scan_of_two_files()
+    assert run_group(api_session, bad) == []
+    assert len(responses.calls) == 0

@@ -59,6 +59,18 @@ test("downloads everything and stores the area, the entries and the blobs", asyn
   assert.ok(manifest.synced_at);
 });
 
+test("a group area's id reaches the listing", async () => {
+  const group = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+  const { fake, run } = setup();
+  mockArea(fake, { groupId: group });
+  mockListing(fake, fileItem(FILE_A));
+  fake.on("GET", downloadUrl(FILE_A), png());
+  await run();
+  const listed = fake.urls().filter((u) => u.includes("is_published=true"));
+  assert.equal(listed.length, 2);
+  assert.ok(listed.every((u) => u.includes(`group=${group}`)));
+});
+
 test("an unknown area raises NotFound", async () => {
   const { fake, run } = setup();
   fake.on("GET", AREAS_URL, reply(loadFixture("areas_geojson.json")));

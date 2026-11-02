@@ -102,12 +102,12 @@ def file_item(
     }
 
 
-def mock_area(aoi_id: str = AOI, name: str = "Zone") -> None:
+def mock_area(aoi_id: str = AOI, name: str = "Zone", group_id: Optional[str] = None) -> None:
     feature = {
         "type": "Feature",
         "id": aoi_id,
         "geometry": AREA_GEOMETRY,
-        "properties": {"id": aoi_id, "name": name},
+        "properties": {"id": aoi_id, "name": name, "group_id": group_id},
     }
     responses.get(AREAS_URL, json={"type": "FeatureCollection", "features": [feature]})
 

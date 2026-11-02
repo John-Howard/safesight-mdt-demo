@@ -50,12 +50,12 @@ export function fileItem(id, o = {}) {
   };
 }
 
-export function mockArea(fake, { aoiId = AOI, name = "Zone" } = {}) {
+export function mockArea(fake, { aoiId = AOI, name = "Zone", groupId = null } = {}) {
   const feature = {
     type: "Feature",
     id: aoiId,
     geometry: AREA_GEOMETRY,
-    properties: { id: aoiId, name },
+    properties: { id: aoiId, name, group_id: groupId },
   };
   fake.on("GET", AREAS_URL, reply({ type: "FeatureCollection", features: [feature] }));
 }

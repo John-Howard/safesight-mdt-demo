@@ -339,9 +339,13 @@ function areaFileItem(row) {
   };
 }
 
-/** Client-side AOI membership: list the files, then intersect each with the AOI. */
-async function scanAreaFiles(session, aoiGeometry) {
+/**
+ * Client-side AOI membership: list the files, then intersect each with the AOI. For a group area
+ * both listings are filtered by `?group=`, since the rows of `/api/v1/files/` carry no group id.
+ */
+async function scanAreaFiles(session, aoiGeometry, group) {
   const query = { is_published: "true", page_size: PAGE_SIZE };
+  if (group !== null) query.group = group;
   const rows = [];
   for (const page of await walk(session, "/api/v1/files/", query)) rows.push(...(page || []));
 
@@ -392,16 +396,26 @@ async function scanAreaFiles(session, aoiGeometry) {
  *
  * Uses SafeSight's AOI files endpoint when it works and reports `can_download`, and otherwise
  * computes membership client-side (see docs/architecture.md). Never sends a `format` parameter.
+ *
+ * A group area (`groupId` set) lists only files tagged with that group, whether the server scopes
+ * it or not. A `groupId` that is not a UUID yields nothing: an unscoped listing would show files
+ * the area must not.
  */
-export async function listAreaFiles(session, aoiId, aoiGeometry) {
+export async function listAreaFiles(session, aoiId, aoiGeometry, groupId = null) {
+  let group = null;
+  if (groupId !== null && groupId !== undefined) {
+    group = normalizeUuid(groupId);
+    if (group === null) return [];
+  }
   if (!isUnsupported(session)) {
     const results = await fetchAoiFiles(session, aoiId);
     if (results !== null) {
       // An empty list cannot tell a server with can_download from one without, so it counts as
       // supported for this call only and nothing is remembered.
-      return results.map(areaFileItem);
+      const own = group === null ? results : results.filter((row) => normalizeUuid(row?.group) === group);
+      return own.map(areaFileItem);
     }
     markUnsupported(session);
   }
-  return scanAreaFiles(session, aoiGeometry);
+  return scanAreaFiles(session, aoiGeometry, group);
 }

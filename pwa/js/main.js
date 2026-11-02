@@ -434,7 +434,7 @@ async function fetchAreaFiles(aoiId) {
     if (knownOffline()) throw new ServerUnavailable("Offline", null);
     // The area list was fetched moments ago; ask again only for an area it did not contain.
     const areaFeature = state.areas.get(String(aoiId)) ?? (await getAreaFeature(session, aoiId));
-    const items = await listAreaFiles(session, aoiId, areaFeature.geometry);
+    const items = await listAreaFiles(session, aoiId, areaFeature.geometry, areaFeature.properties?.group_id ?? null);
     const usable = items.filter((item) => normalizeUuid(item.id) !== null);
     const files = [];
     for (const item of usable) files.push(await liveView(item, manifest, aoiId));
