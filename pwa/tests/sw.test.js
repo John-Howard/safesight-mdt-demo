@@ -7,6 +7,8 @@ import vm from "node:vm";
 const SW_SOURCE = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
 const ORIGIN = "http://localhost:10200";
 const SCOPE = `${ORIGIN}/`;
+// The current shell cache, read from sw.js so a version bump needs no test change.
+const SHELL_CACHE = `mdt-shell-${SW_SOURCE.match(/const SHELL_VERSION = "([^"]+)";/)[1]}`;
 
 class FakeCache {
   constructor() {
@@ -134,9 +136,9 @@ async function installed(options) {
   return env;
 }
 
-test("install precaches every shell file in mdt-shell-v1", async () => {
+test("install precaches every shell file in the current shell cache", async () => {
   const env = await installed();
-  const cache = env.stores.get("mdt-shell-v1");
+  const cache = env.stores.get(SHELL_CACHE);
   assert.ok(cache, "shell cache created");
   const files = shellFiles();
   assert.ok(files.length > 10);
@@ -150,13 +152,13 @@ test("activate deletes old shell caches but keeps the current shell and tile cac
   const env = createSandbox({
     installedCaches: {
       "mdt-shell-v0": new FakeCache(),
-      "mdt-shell-v1": new FakeCache(),
+      [SHELL_CACHE]: new FakeCache(),
       "mdt-tiles": new FakeCache(),
       "someone-elses": new FakeCache(),
     },
   });
   await lifecycle(env, "activate");
-  assert.deepEqual([...env.stores.keys()].sort(), ["mdt-shell-v1", "mdt-tiles", "someone-elses"]);
+  assert.deepEqual([...env.stores.keys()].sort(), [SHELL_CACHE, "mdt-tiles", "someone-elses"].sort());
 });
 
 test("shell requests are served cache-first without touching the network", async () => {
