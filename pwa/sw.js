@@ -12,7 +12,7 @@
 
 "use strict";
 
-const SHELL_VERSION = "v1";
+const SHELL_VERSION = "v2";
 const SHELL_CACHE = `mdt-shell-${SHELL_VERSION}`;
 const SHELL_PREFIX = "mdt-shell-";
 const TILE_CACHE = "mdt-tiles";

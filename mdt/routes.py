@@ -234,7 +234,10 @@ def area_files(api: ApiSession, aoi_id: str):
     manifest = cache.load_manifest(root, aoi_id)
     try:
         area_feature = safesight_client.get_area_feature(api, aoi_id)
-        items = list(safesight_client.iter_area_files(api, aoi_id, area_feature.get("geometry")))
+        group_id = (area_feature.get("properties") or {}).get("group_id")
+        items = list(
+            safesight_client.iter_area_files(api, aoi_id, area_feature.get("geometry"), group_id)
+        )
     except ServerUnavailable:
         if manifest is None:
             raise

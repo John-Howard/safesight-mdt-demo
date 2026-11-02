@@ -245,6 +245,17 @@ def test_files_live_merged_with_cache_status(logged_in, config):
 
 
 @responses.activate
+def test_files_group_area_passes_group_id_to_listing(logged_in):
+    group = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
+    mock_area(group_id=group)
+    mock_listing(file_item(FILE_A))
+    logged_in.get(f"/api/areas/{AOI}/files")
+    listed = [c.request.url for c in responses.calls if "is_published=true" in c.request.url]
+    assert len(listed) == 2
+    assert all(f"group={group}" in u for u in listed)
+
+
+@responses.activate
 def test_files_can_download_false_reports_denied(logged_in):
     mock_area()
     mock_listing(file_item(FILE_A, can_download=False))

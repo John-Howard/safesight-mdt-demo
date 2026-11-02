@@ -38,7 +38,7 @@ export async function syncArea({ session, store, userId, aoiId, maxBytes = null,
   const area = { name: (areaFeature.properties || {}).name ?? null, geometry: areaGeometry };
 
   // Listing happens before anything is written, so a failure here leaves the old manifest alone.
-  const items = await listAreaFiles(session, aoiId, areaGeometry);
+  const items = await listAreaFiles(session, aoiId, areaGeometry, areaFeature.properties?.group_id ?? null);
   const previous = await store.getManifest(userId, aoiId);
   const manifest = newManifest(aoiId, area);
   const summary = { total: 0, downloaded: 0, skipped: 0, denied: 0, failed: 0, bytes: 0 };

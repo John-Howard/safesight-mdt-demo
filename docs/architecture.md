@@ -110,6 +110,16 @@ The scan, using the same predicate as SafeSight's spatial matching engine:
 Cost of the scan: two paginated walks plus one request per coverage-only file. That is
 fine at demo scale, but it scans every file the user can see.
 
+**Group areas list only the group's files.** An AOI belongs to an organisation or to a
+group (`group_id` in the area's GeoJSON properties). For a group area the MDT keeps only
+files tagged with that group, as SafeSight's own group pages do. Both paths apply it:
+endpoint results are filtered on each row's `group`, and the scan sends `?group=<id>` on
+both of its listings, because `/api/v1/files/` rows carry no group id. The client does
+this itself rather than relying on the server, because SafeSight's endpoint returned
+every visible file in a group area (the user's own organisation's files and spatial
+shares) until [SafeSight #409](https://github.com/John-Howard/safesight/pull/409). A
+`group_id` that is not a UUID yields no files rather than an unscoped list.
+
 ### Other traps
 
 1. **Never send a `format` query parameter**, for the reason above.
@@ -134,7 +144,7 @@ fine at demo scale, but it scans every file the user can see.
 | Module | Responsibility |
 |---|---|
 | `mdt/config.py` | Settings from env vars: `SAFESIGHT_BASE_URL` (required), `MDT_CACHE_DIR` (default `./mdt-cache`), `MDT_SECRET_KEY`, `SAFESIGHT_VERIFY_TLS` (default true), `SAFESIGHT_TIMEOUT` (default 30 s), `MDT_MAX_SYNC_BYTES` (default 500 MB per AOI). |
-| `mdt/safesight_client.py` | Functions, not a class: `obtain_tokens`, `refresh_tokens`, `get_areas_geojson`, `iter_area_files(session, aoi_id, aoi_geometry)` (the AOI files endpoint when the server supports it, else the client-side scan described above; yields one dict per file: `id, original_filename, mime_type, file_size, organization_name, group_name, uploaded_at, can_download, geometry`), `get_file_detail`, `download_file_to`, `reset_aoi_files_cache`. Each takes an `ApiSession` (base URL + tokens). On a 401 it refreshes once, retries, and stores the rotated tokens. Raises `SafeSightError` subclasses (`AuthError`, `PermissionDenied`, `NotFound`, `RateLimited`, `ServerUnavailable`). |
+| `mdt/safesight_client.py` | Functions, not a class: `obtain_tokens`, `refresh_tokens`, `get_areas_geojson`, `iter_area_files(session, aoi_id, aoi_geometry, group_id=None)` (the AOI files endpoint when the server supports it, else the client-side scan described above; a group area is limited to that group's files; yields one dict per file: `id, original_filename, mime_type, file_size, organization_name, group_name, uploaded_at, can_download, geometry`), `get_file_detail`, `download_file_to`, `reset_aoi_files_cache`. Each takes an `ApiSession` (base URL + tokens). On a 401 it refreshes once, retries, and stores the rotated tokens. Raises `SafeSightError` subclasses (`AuthError`, `PermissionDenied`, `NotFound`, `RateLimited`, `ServerUnavailable`). |
 | `mdt/token_store.py` | Thread-safe in-memory map `session_id → Tokens`. Tokens are not persisted, so a restart signs everyone out. |
 | `mdt/geometry.py` | `to_geojson(value) -> Optional[dict]` for GeoJSON dicts and, defensively, WKT/EWKT strings (via shapely). `intersects(geometry, aoi_geometry) -> bool` (False for missing or invalid input). `file_feature(file_dict) -> dict` builds a GeoJSON Feature from an `iter_area_files` item; geometry may be null. |
 | `mdt/cache.py` | **Per-user**, per-AOI cache: `MDT_CACHE_DIR/<user_id>/<aoi_id>/manifest.json` + `files/<file_id>`, where `<user_id>` is the SafeSight user's UUID (`cache.user_root`). Users never share cached files, so a viewer SafeSight refuses to let download, or a user in another organisation, cannot read what someone else synced. Writes the manifest atomically (temp file + rename). Each entry records status `downloaded`, `denied` (403), or `failed` with the reason. A re-sync skips files already present with the same `file_size`. File ids must be UUIDs, so a hostile id cannot become a path. |

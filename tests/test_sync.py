@@ -51,6 +51,18 @@ def test_downloads_everything_and_stores_area(api_session, tmp_path):
 
 
 @responses.activate
+def test_group_area_passes_group_id_to_listing(api_session, tmp_path):
+    group = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
+    mock_area(group_id=group)
+    mock_listing(file_item(FILE_A))
+    _download(FILE_A)
+    _run(api_session, tmp_path)
+    listed = [c.request.url for c in responses.calls if "is_published=true" in c.request.url]
+    assert len(listed) == 2
+    assert all(f"group={group}" in u for u in listed)
+
+
+@responses.activate
 def test_unknown_area_raises_not_found(api_session, tmp_path):
     responses.get(AREAS_URL, json=load_fixture("areas_geojson.json"))
     with pytest.raises(NotFound):
@@ -170,7 +182,7 @@ def test_auth_error_propagates_but_progress_is_saved(tmp_path):
 def test_hostile_file_id_is_failed_not_written(api_session, tmp_path, monkeypatch):
     mock_area()
 
-    def fake_iter(session, aoi_id, aoi_geometry):
+    def fake_iter(session, aoi_id, aoi_geometry, group_id=None):
         yield {
             "id": "../../evil",
             "original_filename": "x",

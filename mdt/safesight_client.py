@@ -339,13 +339,37 @@ def _area_file_item(row: dict) -> dict:
     }
 
 
-def iter_area_files(session: ApiSession, aoi_id: str, aoi_geometry: dict) -> Iterator[dict]:
+def _canonical_group(value: Any) -> Optional[str]:
+    """Lowercase hyphenated UUID string, or None when `value` is not a UUID."""
+    if not isinstance(value, str):
+        return None
+    try:
+        return str(uuid.UUID(value))
+    except ValueError:
+        return None
+
+
+def iter_area_files(
+    session: ApiSession,
+    aoi_id: str,
+    aoi_geometry: dict,
+    group_id: Optional[str] = None,
+) -> Iterator[dict]:
     """Yield the files whose point or coverage polygon intersects the AOI.
 
     Uses SafeSight's AOI files endpoint when it works and reports `can_download`,
     and otherwise computes membership client-side (see docs/architecture.md).
     Never sends a `format` query parameter.
+
+    A group area (`group_id` set) lists only files tagged with that group, whether
+    the server scopes it or not. A `group_id` that is not a UUID yields nothing:
+    an unscoped listing would show files the area must not.
     """
+    group = None
+    if group_id is not None:
+        group = _canonical_group(group_id)
+        if group is None:
+            return
     if not _is_unsupported(session.base_url):
         results = _fetch_aoi_files(session, aoi_id)
         if results is None:
@@ -353,14 +377,24 @@ def iter_area_files(session: ApiSession, aoi_id: str, aoi_geometry: dict) -> Ite
         else:
             # An empty list cannot tell a server with can_download from one without,
             # so it counts as supported for this call only and nothing is remembered.
+            if group is not None:
+                results = [row for row in results if _canonical_group(row.get("group")) == group]
             yield from (_area_file_item(row) for row in results)
             return
-    yield from _scan_area_files(session, aoi_geometry)
+    yield from _scan_area_files(session, aoi_geometry, group)
 
 
-def _scan_area_files(session: ApiSession, aoi_geometry: dict) -> Iterator[dict]:
-    """Client-side AOI membership: list the files, then intersect each with the AOI."""
+def _scan_area_files(
+    session: ApiSession, aoi_geometry: dict, group: Optional[str] = None
+) -> Iterator[dict]:
+    """Client-side AOI membership: list the files, then intersect each with the AOI.
+
+    For a group area both listings are filtered by `?group=`, since the rows of
+    `/api/v1/files/` carry no group id to filter on here.
+    """
     query = {"is_published": "true", "page_size": PAGE_SIZE}
+    if group is not None:
+        query["group"] = group
     rows: list[dict] = []
     for page in _walk(session, "/api/v1/files/", query):
         rows.extend(page or [])
